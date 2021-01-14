@@ -5,6 +5,7 @@ Language Features:
 
 Compiler Features:
  * Build system: Update the soljson.js build to emscripten 2.0.12 and boost 1.75.0.
+ * Optimizer: Simple inlining when jumping to small blocks that jump again after a few side-effect free opcodes.
  * Optimizer: Add rule to replace ``iszero(sub(x,y))`` by ``eq(x,y)``.
  * Parser: Report meaningful error if parsing a version pragma failed.
  * SMTChecker: Support ABI functions as uninterpreted functions.
