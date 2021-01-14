@@ -152,6 +152,37 @@ string YulUtilFunctions::storeLiteralInMemoryFunction(string const& _literal)
 	});
 }
 
+std::string YulUtilFunctions::storeLiteralInStorageFunction(string const& _literal)
+{
+	string functionName = "store_literal_in_storage_" + util::toHex(util::keccak256(_literal).asBytes());
+
+	return m_functionCollector.createFunction(functionName, [&]() {
+		size_t words = (_literal.length() + 31) / 32;
+		vector<map<string, string>> wordParams(words);
+		for (size_t i = 0; i < words; ++i)
+		{
+			wordParams[i]["offset"] = to_string(i);
+			wordParams[i]["wordValue"] = formatAsStringOrNumber(_literal.substr(32 * i, 32));
+		}
+
+		return Whiskers(R"(
+			function <functionName>(slot) {
+				let dstPtr := <?long><dataLocation>(slot)<!long>slot</long>
+				<#word>
+					sstore(add(dstPtr, <offset>), <?long><wordValue><!long>add(<wordValue>, mul(2, <length>))</long>)
+				</word>
+				<?long>sstore(slot, add(1, mul(2, <length>)))</long>
+			}
+			)")
+			("functionName", functionName)
+			("long", _literal.size() >= 32)
+			("dataLocation", arrayDataAreaFunction(*TypeProvider::bytesStorage()))
+			("word", wordParams)
+			("length", to_string(_literal.size()))
+			.render();
+	});
+}
+
 string YulUtilFunctions::requireOrAssertFunction(bool _assert, Type const* _messageType)
 {
 	string functionName =
@@ -2588,15 +2619,13 @@ string YulUtilFunctions::updateStorageValueFunction(
 			return Whiskers(R"(
 				function <functionName>(slot<?dynamicOffset>, offset</dynamicOffset>) {
 					<?dynamicOffset>if offset { <panic>() }</dynamicOffset>
-					let value := <copyLiteralToMemory>()
-					<copyToStorage>(slot, value)
+					<copyToStorage>(slot)
 				}
 			)")
 			("functionName", functionName)
 			("dynamicOffset", !_offset.has_value())
 			("panic", panicFunction(PanicCode::Generic))
-			("copyLiteralToMemory", copyLiteralToMemoryFunction(dynamic_cast<StringLiteralType const&>(_fromType).value()))
-			("copyToStorage", copyArrayToStorageFunction(*TypeProvider::bytesMemory(), toArrayType))
+			("copyToStorage", storeLiteralInStorageFunction(dynamic_cast<StringLiteralType const&>(_fromType).value()))
 			.render();
 		}
 
