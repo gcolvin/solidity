@@ -46,10 +46,13 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/program_options.hpp>
 
+#include <range/v3/action/sort.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <range/v3/view/concat.hpp>
 #include <range/v3/view/drop.hpp>
 #include <range/v3/view/stride.hpp>
 
+#include <cctype>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -129,7 +132,19 @@ public:
 			);
 		}
 
-		vector<tuple<char, string>> sortedOptions = views::concat(_optimizationSteps, _extraOptions);
+		auto optionCompare = [](tuple<char, string> const& _option1, tuple<char, string> const& _option2)
+		{
+			return (
+				_option1 != _option2 ?
+				boost::algorithm::lexicographical_compare(get<1>(_option1), get<1>(_option2), boost::algorithm::is_iless()) :
+				tolower(get<0>(_option1)) < tolower(get<0>(_option2))
+			);
+		};
+
+		vector<tuple<char, string>> sortedOptions =
+			views::concat(_optimizationSteps, _extraOptions) |
+			to<vector<tuple<char, string>>>() |
+			actions::sort(optionCompare);
 
 		yulAssert(sortedOptions.size() > 0, "");
 		size_t rows = (sortedOptions.size() - 1) / _columns + 1;
@@ -161,7 +176,8 @@ public:
 			}
 			map<char, string> const& abbreviationMap = OptimiserSuite::stepAbbreviationToNameMap();
 			map<char, string> const& extraOptions = {
-				{'#', "quit"},
+				// QUIT starts with a non-letter character on purpose to get it to show up on top of the list
+				{'q', ">>> QUIT <<<"},
 				{',', "VarNameCleaner"},
 				{';', "StackCompressor"}
 			};
