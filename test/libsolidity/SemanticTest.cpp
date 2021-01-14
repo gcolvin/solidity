@@ -178,16 +178,9 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 				constructed = true;
 			}
 		}
-		catch (langutil::UnimplementedFeatureError const&)
-		{
-			// ignore unimplemented feature errors when forcibly trying to compile via yul.
-			if (!_compileViaYul || m_runWithYul)
-				throw;
-		}
 		catch (langutil::Error const& _error)
 		{
-			// ignore unimplemented feature errors when forcibly trying to compile via yul.
-			if (_error.errorId() != 1834_error || !_compileViaYul || m_runWithYul)
+			if (!_compileViaYul || m_runWithYul)
 				throw;
 		}
 
