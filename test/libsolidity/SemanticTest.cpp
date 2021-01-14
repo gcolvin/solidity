@@ -178,7 +178,11 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 				constructed = true;
 			}
 		}
-		catch (langutil::Error const& _error)
+		catch (langutil::UnimplementedFeatureError const& _error)
+		{
+			throw _error;
+		}
+		catch (langutil::Error const&)
 		{
 			if (!_compileViaYul || m_runWithYul)
 				throw;
